@@ -1,10 +1,12 @@
+using System.Text.Json.Serialization;
 using FileProcessing.Api.Middleware;
 using FileProcessing.Api.Options;
 using FileProcessing.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddOptions<FileProcessingOptions>()
     .Bind(builder.Configuration.GetSection(FileProcessingOptions.SectionName))
@@ -12,6 +14,7 @@ builder.Services.AddOptions<FileProcessingOptions>()
     .ValidateOnStart();
 
 builder.Services.AddScoped<IFileProcessor, CsvFileProcessor>();
+builder.Services.AddSingleton<IFileProcessingTracker, InMemoryFileProcessingTracker>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
