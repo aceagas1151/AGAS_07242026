@@ -1,5 +1,6 @@
 using FileProcessing.Api.Middleware;
 using FileProcessing.Api.Options;
+using FileProcessing.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,8 @@ builder.Services.AddOptions<FileProcessingOptions>()
     .Bind(builder.Configuration.GetSection(FileProcessingOptions.SectionName))
     .Validate(options => !string.IsNullOrWhiteSpace(options.ApiKey), "FileProcessing:ApiKey must be configured.")
     .ValidateOnStart();
+
+builder.Services.AddScoped<IFileProcessor, CsvFileProcessor>();
 
 var app = builder.Build();
 
