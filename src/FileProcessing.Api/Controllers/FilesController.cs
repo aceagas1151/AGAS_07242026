@@ -21,12 +21,18 @@ public class FilesController : ControllerBase
     };
 
     private readonly IFileProcessor _fileProcessor;
+    private readonly IFileProcessingTracker _tracker;
     private readonly FileProcessingOptions _options;
     private readonly ILogger<FilesController> _logger;
 
-    public FilesController(IFileProcessor fileProcessor, IOptions<FileProcessingOptions> options, ILogger<FilesController> logger)
+    public FilesController(
+        IFileProcessor fileProcessor,
+        IFileProcessingTracker tracker,
+        IOptions<FileProcessingOptions> options,
+        ILogger<FilesController> logger)
     {
         _fileProcessor = fileProcessor;
+        _tracker = tracker;
         _options = options.Value;
         _logger = logger;
     }
@@ -35,23 +41,53 @@ public class FilesController : ControllerBase
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<FileProcessingResult>> Process(IFormFile? file, CancellationToken cancellationToken)
     {
-        ValidateFile(file);
+        var startedAtUtc = DateTime.UtcNow;
+        var fileName = file?.FileName ?? "(unknown)";
+        var fileSizeBytes = file?.Length ?? 0;
 
-        _logger.LogInformation(
-            "Processing started for file {FileName} ({FileSizeBytes} bytes)",
-            file!.FileName,
-            file.Length);
+        try
+        {
+            ValidateFile(file);
 
-        await using var stream = file.OpenReadStream();
-        var result = await _fileProcessor.ProcessAsync(stream, file.FileName, cancellationToken);
+            _logger.LogInformation(
+                "Processing started for file {FileName} ({FileSizeBytes} bytes)",
+                fileName,
+                fileSizeBytes);
 
-        _logger.LogInformation(
-            "Processing completed for file {FileName}: {RowCount} rows in {ElapsedMilliseconds} ms",
-            file.FileName,
-            result.RowCount,
-            result.ProcessingTimeMilliseconds);
+            await using var stream = file!.OpenReadStream();
+            var result = await _fileProcessor.ProcessAsync(stream, fileName, cancellationToken);
 
-        return Ok(result);
+            _tracker.RecordSuccess(fileName, fileSizeBytes, startedAtUtc, DateTime.UtcNow, result.RowCount);
+
+            _logger.LogInformation(
+                "Processing completed for file {FileName}: {RowCount} rows in {ElapsedMilliseconds} ms",
+                fileName,
+                result.RowCount,
+                result.ProcessingTimeMilliseconds);
+
+            return Ok(result);
+        }
+        catch (Exception ex) when (ex is FileValidationException or CsvProcessingException)
+        {
+            _tracker.RecordFailure(fileName, fileSizeBytes, startedAtUtc, DateTime.UtcNow, ex.Message);
+            throw;
+        }
+        catch (Exception)
+        {
+            _tracker.RecordFailure(
+                fileName,
+                fileSizeBytes,
+                startedAtUtc,
+                DateTime.UtcNow,
+                "An unexpected error occurred while processing the file.");
+            throw;
+        }
+    }
+
+    [HttpGet("report")]
+    public ActionResult<ProcessingReport> GetReport()
+    {
+        return Ok(_tracker.GetReport());
     }
 
     private void ValidateFile(IFormFile? file)
