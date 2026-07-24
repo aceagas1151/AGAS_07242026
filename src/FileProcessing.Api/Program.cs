@@ -13,7 +13,12 @@ builder.Services.AddOptions<FileProcessingOptions>()
 
 builder.Services.AddScoped<IFileProcessor, CsvFileProcessor>();
 
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 
