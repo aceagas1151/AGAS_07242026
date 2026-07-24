@@ -1,0 +1,12 @@
+services:
+  file-processing-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      FileProcessing__ApiKey: ${FILE_PROCESSING_API_KEY:?Set FILE_PROCESSING_API_KEY before running docker compose up}
+      FileProcessing__MaximumFileSizeBytes: ${FILE_PROCESSING_MAX_FILE_SIZE_BYTES:-5242880}
+      FileProcessing__MaximumTrackedRecords: ${FILE_PROCESSING_MAX_TRACKED_RECORDS:-100}

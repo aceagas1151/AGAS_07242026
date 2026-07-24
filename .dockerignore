@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/.idea/
+**/*.user
+
+.git/
+.gitignore
+
+tests/
+samples/
+postman/
+
+README.md
+*.md
