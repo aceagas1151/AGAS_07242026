@@ -1,17 +1,16 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace FileProcessing.Api.Tests.Integration;
 
 [TestFixture]
 public class HealthEndpointTests
 {
-    private WebApplicationFactory<Program> _factory = null!;
+    private ApiWebApplicationFactory _factory = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _factory = new WebApplicationFactory<Program>();
+        _factory = new ApiWebApplicationFactory();
     }
 
     [TearDown]
